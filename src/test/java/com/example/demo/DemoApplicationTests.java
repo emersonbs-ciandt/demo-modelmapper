@@ -60,6 +60,24 @@ class DemoApplicationTests {
 
 	@SneakyThrows
 	@Test
+	void testSkippingPropertiesModelMapper() {
+
+		Order order = getOrder();
+
+		System.out.println(jsonMapper.writeValueAsString(order));
+
+		modelMapper.createTypeMap(Order.class, OrderDTO.class)
+				.addMappings(mapper -> mapper.skip(OrderDTO::setCustomerFirstName));
+
+		OrderDTO orderDTO = modelMapper.map(order, OrderDTO.class);
+
+		System.out.println(jsonMapper.writeValueAsString(orderDTO));
+
+		assertThat(orderDTO.getCustomerFirstName()).isNotEqualTo(order.getCustomer().getName().getFirstName());
+	}
+
+	@SneakyThrows
+	@Test
 	void testAddMappingModelMapper() {
 		OrderDTO orderDTO = getOrderDTO();
 
