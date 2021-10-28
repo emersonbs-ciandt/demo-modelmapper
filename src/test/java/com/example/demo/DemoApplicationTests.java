@@ -57,6 +57,27 @@ class DemoApplicationTests {
 		assertThat(orderDTO.getBillingCity()).isEqualTo(order.getBilling().getCity());
 	}
 
+
+	@SneakyThrows
+	@Test
+	void testAddMappingModelMapper() {
+		OrderDTO orderDTO = getOrderDTO();
+
+		System.out.println(jsonMapper.writeValueAsString(orderDTO));
+
+		modelMapper.createTypeMap(OrderDTO.class, Order.class)
+				.addMapping(OrderDTO::getCustomerFirstName, Order::setOptionalName);
+
+		Order order = modelMapper.map(orderDTO, Order.class);
+
+		System.out.println(jsonMapper.writeValueAsString(order));
+
+		assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getCustomer().getName().getFirstName());
+		assertThat(orderDTO.getBillingStreet()).isEqualTo(order.getBilling().getStreet());
+		assertThat(orderDTO.getBillingCity()).isEqualTo(order.getBilling().getCity());
+		assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getOptionalName());
+	}
+
 	@SneakyThrows
 	@Test
 	void testToListModelMapper() {

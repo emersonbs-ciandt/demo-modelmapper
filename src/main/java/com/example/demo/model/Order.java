@@ -8,5 +8,6 @@ import lombok.Setter;
 public class Order {
     Customer customer;
     Address billing;
+    String optionalName;
 }
 
