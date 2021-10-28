@@ -84,7 +84,9 @@ class DemoApplicationTests {
 
 		Converter<Order, ListOrder> converter = context -> {
 			List<Order> orderList = new ArrayList<>();
-			orderList.add(context.getSource());
+			Order o = context.getSource();
+			o.setOptionalName("Change value on converter");
+			orderList.add(o);
 
 			ListOrder listOrder = new ListOrder();
 			listOrder.setOrderList(orderList);
