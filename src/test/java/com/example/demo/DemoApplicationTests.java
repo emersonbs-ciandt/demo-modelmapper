@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.dto.BadOrderDTO;
 import com.example.demo.dto.OrderDTO;
 import com.example.demo.model.Address;
 import com.example.demo.model.Customer;
@@ -11,144 +12,166 @@ import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.Converter;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.ValidationException;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 class DemoApplicationTests {
 
-	private ObjectMapper jsonMapper = new ObjectMapper();
+    private ObjectMapper jsonMapper = new ObjectMapper();
 
-	private ModelMapper modelMapper  = new ModelMapper();
+    private ModelMapper modelMapper = new ModelMapper();
 
-	@SneakyThrows
-	@Test
-	void testFlatteningModelMapper() {
-		Order order = getOrder();
+    @SneakyThrows
+    @Test
+    void testFlatteningModelMapper() {
+        Order order = getOrder();
 
-		System.out.println(jsonMapper.writeValueAsString(order));
+        System.out.println(jsonMapper.writeValueAsString(order));
 
-		OrderDTO orderDTO = modelMapper.map(order, OrderDTO.class);
+        OrderDTO orderDTO = modelMapper.map(order, OrderDTO.class);
 
-		System.out.println(jsonMapper.writeValueAsString(orderDTO));
+        System.out.println(jsonMapper.writeValueAsString(orderDTO));
 
-		assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getCustomer().getName().getFirstName());
-		assertThat(orderDTO.getBillingStreet()).isEqualTo(order.getBilling().getStreet());
-		assertThat(orderDTO.getBillingCity()).isEqualTo(order.getBilling().getCity());
-	}
+        modelMapper.validate();
 
-	@SneakyThrows
-	@Test
-	void testProjectionModelMapper() {
-		OrderDTO orderDTO = getOrderDTO();
+        assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getCustomer().getName().getFirstName());
+        assertThat(orderDTO.getBillingStreet()).isEqualTo(order.getBilling().getStreet());
+        assertThat(orderDTO.getBillingCity()).isEqualTo(order.getBilling().getCity());
+    }
 
-		System.out.println(jsonMapper.writeValueAsString(orderDTO));
+    @SneakyThrows
+    @Test
+    void testValidateExceptionModelMapper() {
+        Order order = getOrder();
 
-		Order order = modelMapper.map(orderDTO, Order.class);
+        System.out.println(jsonMapper.writeValueAsString(order));
 
-		System.out.println(jsonMapper.writeValueAsString(order));
+        BadOrderDTO orderDTO = modelMapper.map(order, BadOrderDTO.class);
 
-		assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getCustomer().getName().getFirstName());
-		assertThat(orderDTO.getBillingStreet()).isEqualTo(order.getBilling().getStreet());
-		assertThat(orderDTO.getBillingCity()).isEqualTo(order.getBilling().getCity());
-	}
+        System.out.println(jsonMapper.writeValueAsString(orderDTO));
 
+        ValidationException thrown = assertThrows(
+                ValidationException.class,
+                () -> modelMapper.validate()
+        );
 
-	@SneakyThrows
-	@Test
-	void testSkippingPropertiesModelMapper() {
+        assertThat(thrown.getMessage()).contains("Unmapped destination properties found in TypeMap");
+    }
 
-		Order order = getOrder();
+    @SneakyThrows
+    @Test
+    void testProjectionModelMapper() {
+        OrderDTO orderDTO = getOrderDTO();
 
-		System.out.println(jsonMapper.writeValueAsString(order));
+        System.out.println(jsonMapper.writeValueAsString(orderDTO));
 
-		modelMapper.createTypeMap(Order.class, OrderDTO.class)
-				.addMappings(mapper -> mapper.skip(OrderDTO::setCustomerFirstName));
+        Order order = modelMapper.map(orderDTO, Order.class);
 
-		OrderDTO orderDTO = modelMapper.map(order, OrderDTO.class);
+        System.out.println(jsonMapper.writeValueAsString(order));
 
-		System.out.println(jsonMapper.writeValueAsString(orderDTO));
+        assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getCustomer().getName().getFirstName());
+        assertThat(orderDTO.getBillingStreet()).isEqualTo(order.getBilling().getStreet());
+        assertThat(orderDTO.getBillingCity()).isEqualTo(order.getBilling().getCity());
+    }
 
-		assertThat(orderDTO.getCustomerFirstName()).isNotEqualTo(order.getCustomer().getName().getFirstName());
-	}
+    @SneakyThrows
+    @Test
+    void testSkippingPropertiesModelMapper() {
 
-	@SneakyThrows
-	@Test
-	void testAddMappingModelMapper() {
-		OrderDTO orderDTO = getOrderDTO();
+        Order order = getOrder();
 
-		System.out.println(jsonMapper.writeValueAsString(orderDTO));
+        System.out.println(jsonMapper.writeValueAsString(order));
 
-		modelMapper.createTypeMap(OrderDTO.class, Order.class)
-				.addMapping(OrderDTO::getCustomerFirstName, Order::setOptionalName);
+        modelMapper.createTypeMap(Order.class, OrderDTO.class)
+                .addMappings(mapper -> mapper.skip(OrderDTO::setCustomerFirstName));
 
-		Order order = modelMapper.map(orderDTO, Order.class);
+        OrderDTO orderDTO = modelMapper.map(order, OrderDTO.class);
 
-		System.out.println(jsonMapper.writeValueAsString(order));
+        System.out.println(jsonMapper.writeValueAsString(orderDTO));
 
-		assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getCustomer().getName().getFirstName());
-		assertThat(orderDTO.getBillingStreet()).isEqualTo(order.getBilling().getStreet());
-		assertThat(orderDTO.getBillingCity()).isEqualTo(order.getBilling().getCity());
-		assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getOptionalName());
-	}
+        assertThat(orderDTO.getCustomerFirstName()).isNotEqualTo(order.getCustomer().getName().getFirstName());
+    }
 
-	@SneakyThrows
-	@Test
-	void testToListModelMapper() {
+    @SneakyThrows
+    @Test
+    void testAddMappingModelMapper() {
+        OrderDTO orderDTO = getOrderDTO();
 
-		Converter<Order, ListOrder> converter = context -> {
-			List<Order> orderList = new ArrayList<>();
-			Order o = context.getSource();
-			o.setOptionalName("Change value on converter");
-			orderList.add(o);
+        System.out.println(jsonMapper.writeValueAsString(orderDTO));
 
-			ListOrder listOrder = new ListOrder();
-			listOrder.setOrderList(orderList);
-			return listOrder;
-		};
+        modelMapper.createTypeMap(OrderDTO.class, Order.class)
+                .addMapping(OrderDTO::getCustomerFirstName, Order::setOptionalName);
 
-		modelMapper.createTypeMap(Order.class, ListOrder.class).setConverter(converter);
+        Order order = modelMapper.map(orderDTO, Order.class);
 
-		Order order = getOrder();
+        System.out.println(jsonMapper.writeValueAsString(order));
 
-		ListOrder orderList = modelMapper.map(order, ListOrder.class);
+        assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getCustomer().getName().getFirstName());
+        assertThat(orderDTO.getBillingStreet()).isEqualTo(order.getBilling().getStreet());
+        assertThat(orderDTO.getBillingCity()).isEqualTo(order.getBilling().getCity());
+        assertThat(orderDTO.getCustomerFirstName()).isEqualTo(order.getOptionalName());
+    }
 
-		System.out.println(jsonMapper.writeValueAsString(orderList));
+    @SneakyThrows
+    @Test
+    void testToListModelMapper() {
 
-		assertThat(orderList.getOrderList().get(0).getCustomer().getName().getFirstName()).isEqualTo(order.getCustomer().getName().getFirstName());
-	}
+        Converter<Order, ListOrder> converter = context -> {
+            List<Order> orderList = new ArrayList<>();
+            Order o = context.getSource();
+            o.setOptionalName("Change value on converter");
+            orderList.add(o);
 
-	private Order getOrder() {
-		Order order = new Order();
+            ListOrder listOrder = new ListOrder();
+            listOrder.setOrderList(orderList);
+            return listOrder;
+        };
 
-		Name name = new Name();
-		name.setFirstName("First Name 1");
-		name.setLastName("Last Name 1");
+        modelMapper.createTypeMap(Order.class, ListOrder.class).setConverter(converter);
 
-		Customer customer = new Customer();
-		customer.setName(name);
+        Order order = getOrder();
 
-		Address address = new Address();
-		address.setCity("City 1");
-		address.setStreet("Street 1");
+        ListOrder orderList = modelMapper.map(order, ListOrder.class);
 
-		order.setCustomer(customer);
-		order.setBilling(address);
-		return order;
-	}
+        System.out.println(jsonMapper.writeValueAsString(orderList));
 
+        assertThat(orderList.getOrderList().get(0).getCustomer().getName().getFirstName()).isEqualTo(
+                order.getCustomer().getName().getFirstName());
+    }
 
-	private OrderDTO getOrderDTO() {
-		OrderDTO orderDTO = new OrderDTO();
-		orderDTO.setCustomerFirstName("First Name 1");
-		orderDTO.setCustomerLastName("Last Name 1");
-		orderDTO.setBillingStreet("Street 1");
-		orderDTO.setBillingCity("City 1");
-		return orderDTO;
-	}
+    private Order getOrder() {
+        Order order = new Order();
+
+        Name name = new Name();
+        name.setFirstName("First Name 1");
+        name.setLastName("Last Name 1");
+
+        Customer customer = new Customer();
+        customer.setName(name);
+
+        Address address = new Address();
+        address.setCity("City 1");
+        address.setStreet("Street 1");
+
+        order.setCustomer(customer);
+        order.setBilling(address);
+        return order;
+    }
+
+    private OrderDTO getOrderDTO() {
+        OrderDTO orderDTO = new OrderDTO();
+        orderDTO.setCustomerFirstName("First Name 1");
+        orderDTO.setCustomerLastName("Last Name 1");
+        orderDTO.setBillingStreet("Street 1");
+        orderDTO.setBillingCity("City 1");
+        return orderDTO;
+    }
 
 }
